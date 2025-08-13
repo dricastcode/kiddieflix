@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KiddieFlix</title>
+
+  <!-- Kid-friendly font -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1DD75B" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-bubble">KF</span>
+      <span class="brand-text">KiddieFlix</span>
+    </div>
+
+    <div class="header-actions">
+      <button id="profilePill" class="profile-pill" title="Current profile" aria-label="Current profile">
+        <span class="avatar-dot" id="profileDot"></span>
+        <span id="profileName">Profile</span>
+      </button>
+
+      <button id="favToggleBtn" class="icon-btn" aria-pressed="false" title="Show favorites only">⭐ Favorites</button>
+      <button id="editModeBtn" class="icon-btn" title="Edit (remove videos)">✏️ Edit</button>
+      <button id="parentBtn" class="icon-btn" title="Parent panel" aria-label="Parent panel">🔒 Parents</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Profile gate -->
+    <div id="profileGate" class="profile-gate" hidden>
+      <div class="gate-inner">
+        <h2>Who’s watching?</h2>
+        <div id="profileList" class="profile-list"></div>
+        <button id="addProfileBtn" class="add-prof-btn">➕ Add Profile</button>
+      </div>
+    </div>
+
+    <!-- Videos grid -->
+    <section id="grid" class="grid" aria-label="Videos grid"></section>
+  </main>
+
+  <!-- Player Modal -->
+  <div id="playerModal" class="modal" role="dialog" aria-modal="true" aria-label="Video player" hidden>
+    <div class="modal-inner">
+      <div class="player-wrap">
+        <div id="player"></div>
+        <!-- Shield blocks any direct clicks to YouTube iframe -->
+        <div class="click-shield" aria-hidden="true"></div>
+      </div>
+      <div class="controls">
+        <button id="playPauseBtn" class="control-btn">Play</button>
+        <button id="fullscreenBtn" class="control-btn">Fullscreen</button>
+        <button id="closeBtn" class="control-btn control-danger">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIN Dialog -->
+  <dialog id="pinDialog" class="pin-dialog">
+    <form method="dialog" id="pinForm" class="pin-form">
+      <h2 id="pinTitle">Set Parent PIN</h2>
+      <p id="pinMsg" class="muted">Choose a 4–8 digit PIN you’ll remember.</p>
+
+      <label class="pin-label">
+        <input id="pinInput" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="••••" required minlength="4" maxlength="8" />
+      </label>
+
+      <label class="pin-label" id="pinConfirmWrap">
+        <input id="pinInput2" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="Confirm PIN" minlength="4" maxlength="8" />
+      </label>
+
+      <div class="form-actions">
+        <button class="primary" id="pinOkBtn">OK</button>
+        <button value="cancel">Cancel</button>
+      </div>
+
+      <button type="button" id="forgotPinBtn" class="linkish">Forgot PIN?</button>
+    </form>
+  </dialog>
+
+  <!-- Parent Panel -->
+  <dialog id="parentPanel">
+    <form method="dialog" class="parent-form" id="addVideoForm">
+      <h2>Parent Panel</h2>
+      <p>Add a YouTube link — we’ll extract the ID for you and keep kids inside the app.</p>
+
+      <label>
+        Video URL
+        <input id="videoUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." required />
+      </label>
+
+      <label>
+        Title
+        <input id="videoTitle" type="text" placeholder="Fun Video Title" required />
+      </label>
+
+      <div class="drop-zone" id="dropZone" aria-label="Drop a YouTube URL here">
+        Drop a YouTube URL here
+      </div>
+
+      <!-- Profile targeting -->
+      <div id="profileChecks" class="profile-checks">
+        <div class="checks-head">Show to:</div>
+        <label class="chk"><input type="checkbox" id="showAll" checked> All profiles</label>
+        <div id="checksWrap"></div>
+      </div>
+
+      <details class="pin-tools">
+        <summary>PIN options</summary>
+        <div class="pin-actions" style="display:flex;gap:8px;margin-top:8px;">
+          <button type="button" id="changePinBtn">Change PIN</button>
+          <button type="button" id="removePinBtn" class="danger">Remove PIN</button>
+        </div>
+      </details>
+
+      <div class="form-actions">
+        <button id="addBtn" class="primary">Add to Grid</button>
+        <button id="exportBtn" type="button">Export JSON</button>
+        <label class="import-wrap">
+          Import JSON
+          <input id="importInput" type="file" accept="application/json" />
+        </label>
+        <button id="clearBtn" type="button" class="danger">Clear All (local)</button>
+        <button id="closeParent" type="button">Close</button>
+      </div>
+    </form>
+    <div class="hint">
+      Tip: It saves to <code>localStorage</code>. Export if you want to move it to another device.
+    </div>
+  </dialog>
+
+  <!-- Edit bar -->
+  <div id="editBar" class="edit-bar" hidden>
+    <span id="editCount">0 selected</span>
+    <div class="spacer"></div>
+    <button id="deleteSelectedBtn" class="control-btn control-danger">Delete Selected</button>
+    <button id="cancelEditBtn" class="control-btn">Cancel</button>
+  </div>
+
+  <!-- In-app splash overlay -->
+  <div id="appSplash" aria-hidden="true">
+    <img id="splashImg" src="splash/splash-portrait-1536x2048.png" alt="">
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // YouTube IFrame API
+    (function(){
+      const tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+    })();
+
+    // PWA: register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(()=>{});
+      });
+    }
+
+    // Splash: swap image by orientation; fade after load
+    (function(){
+      const sp = document.getElementById('appSplash');
+      if (!sp) return;
+
+      const img = document.getElementById('splashImg');
+      const setByOrientation = () => {
+        const portrait = window.matchMedia('(orientation: portrait)').matches;
+        img.src = portrait
+          ? 'splash/splash-portrait-1536x2048.png'
+          : 'splash/splash-landscape-2048x1536.png';
+      };
+      setByOrientation();
+      window.addEventListener('orientationchange', setByOrientation);
+      window.addEventListener('load', () => {
+        setTimeout(() => sp.classList.add('fade-out'), 450);
+      });
+    })();
+  </script>
+</body>
+</html>
